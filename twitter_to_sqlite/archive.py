@@ -137,7 +137,7 @@ register("mute", each="muting", pk="accountId")
 
 
 @register_all("ni-devices")
-def lists_created(data):
+def ni_devices(data):
     devices = []
     for block in data:
         block = block["niDeviceResponse"]
@@ -145,7 +145,7 @@ def lists_created(data):
         details = list(block.values())[0]
         details["category"] = category
         devices.append(details)
-    return {"ne-devices": devices}
+    return {"ni-devices": devices}
 
 
 # Skipped all the periscope- stuff for the moment

@@ -28,7 +28,6 @@ def register_each(filename, pk=None):
 
     return inner
 
-
 def register_multi(filename):
     def inner(fn):
         transformers[filename] = (fn, None)
@@ -197,6 +196,7 @@ register("saved-search", each="savedSearch", pk="savedSearchId")
 
 @register_each("tweet", pk="id")
 @register_each("tweets", pk="id")
+@register_each("tweets-part1", pk="id")
 def tweet(item):
     # Older versions of the archive have the tweet data at the top level of the
     # item; newer versions have it all in a 'tweet' sub-key.
@@ -208,7 +208,7 @@ def tweet(item):
             item[key] = int(item[key])
 
     # Handle some columns that are sometimes missing
-    optional_columns = ["possibly_sensitive", "coordinates", "geo", "extended_entities"]
+    optional_columns = ["possibly_sensitive", "coordinates", "geo", "extended_entities", "withheld_in_countries"]
     for col in optional_columns:
         item.setdefault(col, None)
 
@@ -239,7 +239,6 @@ def _list_from_common(data):
 
 def import_from_file(db, filename, content):
     assert filename.endswith(".js"), "{} does not end with .js".format(filename)
-    existing_tables = set(db.table_names())
     filename = filename[: -len(".js")]
     if filename not in transformers:
         if filename not in IGNORE:
@@ -249,10 +248,9 @@ def import_from_file(db, filename, content):
     data = extract_json(content)
     to_insert = transformer(data)
     for table, rows in to_insert.items():
-        table_name = "archive_{}".format(table.replace("-", "_"))
-        # Drop and re-create if it already exists
-        if table_name in existing_tables:
-            db[table_name].drop()
+        table_name = "{}".format(table.replace("-", "_"))
+        if table_name == "tweets_part1":
+            table_name = "tweets"
         if pk is not None:
             db[table_name].insert_all(rows, pk=pk, replace=True)
         else:
